@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ShiftTrack — Daily Work Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f1f5f9;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--border2:#cbd5e1;
+  --accent:#6366f1;--accent-light:#eef2ff;--accent2:#ef4444;--accent2-light:#fef2f2;
+  --accent3:#10b981;--accent3-light:#ecfdf5;--warn:#f59e0b;--warn-light:#fffbeb;
+  --text:#0f172a;--text2:#334155;--muted:#94a3b8;--radius:12px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow:0 4px 16px rgba(0,0,0,0.07),0 1px 3px rgba(0,0,0,0.05);
+  --shadow-lg:0 10px 40px rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.container{max-width:980px;margin:0 auto;padding:0 20px 60px;}
+
+/* Header */
+header{padding:22px 0 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-icon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:grid;place-items:center;font-size:20px;box-shadow:0 2px 8px rgba(99,102,241,0.3);}
+.brand h1{font-size:1.4rem;font-weight:700;letter-spacing:-0.5px;}
+.brand h1 span{color:var(--accent);}
+.subtitle{font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.clock-time{font-family:'Space Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--text);letter-spacing:1px;}
+.clock-label{font-size:0.58rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:3px;text-align:right;}
+.icon-btn{width:38px;height:38px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;font-size:1.1rem;transition:all 0.15s;flex-shrink:0;}
+.icon-btn:hover{background:var(--accent-light);border-color:var(--accent);}
+.icon-btn#settingsToggle:hover{transform:rotate(30deg);}
+
+/* Shift / Name bar */
+.topbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:var(--shadow-sm);}
+.topbar-group{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.topbar-label{font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.topbar-input{font-family:'Inter',sans-serif;font-size:0.88rem;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;outline:none;flex:1;min-width:150px;transition:border-color 0.15s;}
+.topbar-input:focus{border-color:var(--accent);}
+.shift-num{font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--accent);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;outline:none;width:68px;text-align:center;transition:border-color 0.15s;}
+.shift-num:focus{border-color:var(--accent);}
+.shift-num::-webkit-outer-spin-button,.shift-num::-webkit-inner-spin-button{-webkit-appearance:none;}
+.shift-num[type=number]{-moz-appearance:textfield;}
+.shift-unit{font-size:0.72rem;color:var(--muted);font-weight:500;}
+
+/* Progress */
+.progress-section{margin-bottom:20px;}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.progress-title{font-size:0.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:500;}
+.progress-pct{font-family:'Space Mono',monospace;font-size:0.8rem;font-weight:700;}
+.progress-track{height:8px;background:var(--border);border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1),background 0.3s;}
+.progress-fill.ok{background:linear-gradient(90deg,#6366f1,#818cf8);}
+.progress-fill.warn{background:linear-gradient(90deg,#d97706,#f59e0b);}
+.progress-fill.over{background:linear-gradient(90deg,#dc2626,#ef4444);}
+
+/* Summary */
+.summary-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:18px;box-shadow:var(--shadow-sm);}
+.sum-item{text-align:center;}
+.sum-val{font-family:'Space Mono',monospace;font-size:1.3rem;font-weight:700;line-height:1;color:var(--text);}
+.sum-val.green{color:var(--accent3);}.sum-val.yellow{color:var(--warn);}.sum-val.red{color:var(--accent2);}.sum-val.blue{color:var(--accent);}
+.sum-lbl{font-size:0.58rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;font-weight:500;}
+.status-badge{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:5px 12px;font-size:0.72rem;font-weight:600;}
+.status-ok{background:var(--accent3-light);color:var(--accent3);border:1px solid #a7f3d0;}
+.status-warn{background:var(--warn-light);color:var(--warn);border:1px solid #fde68a;}
+.status-over{background:var(--accent2-light);color:var(--accent2);border:1px solid #fecaca;}
+
+/* Section title */
+.section-title{font-size:0.62rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px;font-weight:600;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Task Grid */
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:16px;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);transition:box-shadow 0.2s,transform 0.15s,border-color 0.2s;position:relative;}
+.task-card:hover{box-shadow:var(--shadow);transform:translateY(-2px);border-color:var(--border2);}
+.task-card::before{content:'';position:absolute;top:0;left:16px;right:16px;height:2px;background:var(--accent);border-radius:0 0 3px 3px;opacity:0;transition:opacity 0.2s;}
+.task-card:hover::before{opacity:1;}
+.task-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.task-name{font-size:0.9rem;font-weight:600;color:var(--text);flex:1;}
+.task-rate{font-family:'Space Mono',monospace;font-size:0.65rem;background:var(--accent-light);color:var(--accent);border-radius:6px;padding:3px 8px;font-weight:700;flex-shrink:0;}
+.task-del-btn{width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;display:grid;place-items:center;transition:all 0.15s;flex-shrink:0;}
+.task-del-btn:hover{background:var(--accent2-light);color:var(--accent2);}
+.task-input-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.task-count-label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:500;white-space:nowrap;}
+.task-result{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border);}
+.task-mins{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--accent);}
+.task-hrs{font-size:0.68rem;color:var(--muted);margin-top:2px;font-weight:500;}
+.task-bar{height:3px;background:var(--border);border-radius:99px;margin-top:10px;overflow:hidden;}
+.task-bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width 0.4s ease;}
+
+/* Add task panel */
+.add-task-panel{background:var(--surface);border:2px dashed var(--border2);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px;}
+.add-task-title{font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+.add-task-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.add-task-name{font-family:'Inter',sans-serif;font-size:0.85rem;font-weight:500;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;outline:none;flex:1;min-width:140px;transition:border-color 0.15s;}
+.add-task-name:focus{border-color:var(--accent);}
+.add-task-mins{font-family:'Space Mono',monospace;font-size:0.85rem;font-weight:700;color:var(--accent);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;outline:none;width:80px;text-align:center;transition:border-color 0.15s;}
+.add-task-mins:focus{border-color:var(--accent);}
+.add-task-mins::-webkit-outer-spin-button,.add-task-mins::-webkit-inner-spin-button{-webkit-appearance:none;}
+.add-task-mins[type=number]{-moz-appearance:textfield;}
+.add-task-auto-label{display:flex;align-items:center;gap:6px;font-size:0.73rem;color:var(--text2);cursor:pointer;white-space:nowrap;font-weight:500;}
+.add-task-auto-label input{accent-color:var(--accent);width:15px;height:15px;}
+.add-task-hint{font-size:0.65rem;color:var(--muted);margin-top:8px;}
+
+/* Input styles */
+.counter-widget{display:flex;align-items:center;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.counter-btn{background:var(--surface2);border:none;color:var(--accent);font-size:1rem;font-weight:700;width:32px;height:32px;cursor:pointer;transition:background 0.15s;display:grid;place-items:center;flex-shrink:0;}
+.counter-btn:hover{background:var(--accent-light);}
+.counter-num{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--text);width:46px;text-align:center;background:#fff;border:none;outline:none;padding:4px 0;}
+.counter-num::placeholder{color:var(--muted);font-weight:400;font-size:0.85rem;}
+.counter-num::-webkit-outer-spin-button,.counter-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.counter-num[type=number]{-moz-appearance:textfield;}
+/* Slider */
+.slider-wrap{width:100%;}
+.slider-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.slider-val{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--accent);}
+input[type=range].task-slider{-webkit-appearance:none;width:100%;height:6px;background:var(--border);border-radius:99px;outline:none;cursor:pointer;}
+input[type=range].task-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(99,102,241,0.35);}
+input[type=range].task-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;}
+.slider-minmax{display:flex;justify-content:space-between;font-size:0.58rem;color:var(--muted);margin-top:3px;}
+
+/* Auto card */
+.auto-card{border-color:#c7d2fe;background:linear-gradient(135deg,#fff,#f5f3ff);}
+.auto-card::before{background:linear-gradient(90deg,var(--accent),#a78bfa);opacity:1;}
+.auto-badge{font-size:0.58rem;font-weight:700;background:var(--accent-light);color:var(--accent);border:1px solid #c7d2fe;border-radius:99px;padding:2px 8px;vertical-align:middle;margin-left:6px;}
+.auto-hint{font-size:0.68rem;color:var(--accent);background:var(--accent-light);border-radius:6px;padding:5px 10px;margin-bottom:10px;font-weight:500;}
+.auto-widget-editable{border-color:#c7d2fe;background:var(--accent-light);margin-bottom:6px;}
+.auto-reset-row{display:flex;align-items:center;justify-content:space-between;}
+.auto-calc-info{font-size:0.65rem;font-weight:600;color:var(--accent);}
+.auto-reset-btn{font-size:0.62rem;font-weight:600;background:transparent;border:1px solid #c7d2fe;color:var(--accent);border-radius:6px;padding:3px 10px;cursor:pointer;transition:all 0.15s;}
+.auto-reset-btn:hover{background:var(--accent);color:#fff;}
+
+/* Buttons */
+.btn{font-family:'Inter',sans-serif;font-weight:600;font-size:0.78rem;border:none;border-radius:8px;padding:9px 18px;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,0.25);}
+.btn-primary:hover{background:#4f46e5;transform:translateY(-1px);}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--border);}
+.btn-danger{background:var(--accent2-light);color:var(--accent2);border:1px solid #fecaca;}
+.btn-danger:hover{background:#fee2e2;}
+.btn-success{background:var(--accent3);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,0.25);}
+.btn-success:hover{background:#059669;transform:translateY(-1px);}
+.btn-sm{padding:7px 14px;font-size:0.74rem;}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
+
+/* History */
+.history-list{display:flex;flex-direction:column;gap:8px;}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:var(--shadow-sm);}
+.history-date{font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted);}
+.history-client{font-size:0.7rem;font-weight:600;color:var(--accent);background:var(--accent-light);border-radius:99px;padding:2px 10px;}
+.history-tasks{display:flex;gap:6px;flex-wrap:wrap;}
+.history-tag{background:var(--accent-light);color:var(--accent);border-radius:99px;padding:2px 10px;font-size:0.65rem;font-weight:600;}
+.history-total{font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--accent3);font-weight:700;}
+.history-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;padding:2px 6px;border-radius:4px;transition:all 0.15s;}
+.history-del:hover{color:var(--accent2);background:var(--accent2-light);}
+.empty-history{text-align:center;color:var(--muted);font-size:0.8rem;padding:32px;background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius);}
+
+/* Settings drawer */
+.settings-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.35);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.settings-overlay.open{opacity:1;pointer-events:all;}
+.settings-drawer{position:fixed;top:0;right:-420px;width:400px;max-width:96vw;height:100vh;background:var(--surface);box-shadow:var(--shadow-lg);z-index:201;transition:right 0.3s cubic-bezier(0.34,1.1,0.64,1);display:flex;flex-direction:column;}
+.settings-drawer.open{right:0;}
+.settings-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.settings-hdr-title{font-size:1rem;font-weight:700;}
+.settings-close{width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;font-size:1rem;transition:all 0.15s;}
+.settings-close:hover{background:var(--accent2-light);color:var(--accent2);}
+.settings-body{padding:18px 20px;overflow-y:auto;flex:1;}
+.settings-sec{margin-bottom:22px;}
+.settings-sec-title{font-size:0.62rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+/* Style options */
+.style-opt{display:flex;align-items:center;gap:12px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;cursor:pointer;margin-bottom:8px;transition:all 0.15s;}
+.style-opt:hover{border-color:var(--border2);background:var(--surface2);}
+.style-opt.active{border-color:var(--accent);background:var(--accent-light);}
+.style-opt-icon{font-size:1.2rem;flex-shrink:0;width:28px;text-align:center;}
+.style-opt-info{flex:1;}
+.style-opt-name{font-size:0.82rem;font-weight:600;}
+.style-opt-desc{font-size:0.67rem;color:var(--muted);margin-top:1px;}
+.style-opt-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;flex-shrink:0;font-size:0.7rem;transition:all 0.15s;}
+.style-opt.active .style-opt-check{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* Duration rows in settings */
+.dur-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;background:var(--surface2);}
+.dur-name{font-size:0.82rem;font-weight:600;color:var(--text2);flex:1;}
+.dur-wrap{display:flex;align-items:center;gap:6px;}
+.dur-input{font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--accent);width:56px;text-align:center;background:#fff;border:2px solid var(--border);border-radius:8px;padding:4px 6px;outline:none;transition:border-color 0.15s;}
+.dur-input:focus{border-color:var(--accent);}
+.dur-input::-webkit-outer-spin-button,.dur-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.dur-input[type=number]{-moz-appearance:textfield;}
+.dur-unit{font-size:0.68rem;color:var(--muted);font-weight:500;}
+.dur-reset{font-size:0.65rem;font-weight:600;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all 0.15s;margin-top:8px;width:100%;}
+.dur-reset:hover{background:var(--accent2-light);color:var(--accent2);border-color:#fecaca;}
+
+/* Theme swatches */
+.theme-row{display:flex;gap:8px;flex-wrap:wrap;}
+.swatch{width:34px;height:34px;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:all 0.15s;position:relative;}
+.swatch:hover{transform:scale(1.12);}
+.swatch.active{border-color:var(--text);}
+.swatch.active::after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:0.75rem;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,0.4);}
+
+/* Dark mode */
+body.dark{--bg:#0f172a;--surface:#1e293b;--surface2:#162032;--border:#2d3f55;--border2:#3a5068;--text:#e2e8f0;--text2:#94a3b8;--muted:#4a6280;--accent-light:#1e254a;--accent2-light:#2a1520;--accent3-light:#0f2a1e;--warn-light:#2a1f0a;}
+body.dark .counter-num{background:var(--surface2);}
+body.dark .add-task-name,body.dark .add-task-mins,body.dark .topbar-input,body.dark .shift-num{background:var(--surface);color:var(--text);}
+body.dark .dur-input{background:var(--surface2);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--surface);border-radius:10px;padding:12px 20px;font-size:0.8rem;font-weight:500;z-index:300;transform:translateY(20px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);box-shadow:var(--shadow-lg);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* Settings info */
+.settings-info{background:var(--accent-light);border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;font-size:0.72rem;color:var(--text2);line-height:1.6;}
+
+@media(max-width:600px){
+  .clock-time{font-size:1.1rem;}
+  .settings-drawer{width:100%;max-width:100%;}
+  .topbar{gap:10px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⏱</div>
+      <div>
+        <h1>Shift<span>Track</span></h1>
+        <div class="subtitle" id="headerSub">Daily Work Time Monitor</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div>
+        <div class="clock-time" id="liveClock">--:--:--</div>
+        <div class="clock-label">Current Time</div>
+      </div>
+      <div class="icon-btn" id="settingsToggle" onclick="openSettings()" title="Settings">⚙️</div>
+    </div>
+  </header>
+
+  <!-- Name / Shift Bar -->
+  <div class="topbar">
+    <div class="topbar-group" style="flex:1;min-width:180px;">
+      <span class="topbar-label">👤 Name</span>
+      <input class="topbar-input" id="userName" placeholder="Your name..." oninput="saveProfile()"/>
+    </div>
+    <div class="topbar-group">
+      <span class="topbar-label">🏢 Client</span>
+      <input class="topbar-input" id="clientName" placeholder="Client name..." style="min-width:120px;" oninput="saveProfile()"/>
+    </div>
+
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <div class="progress-title" id="progressTitle">Task Load vs Shift Capacity (420 mins)</div>
+      <div class="progress-pct" id="taskPct" style="color:var(--accent3)">0%</div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill ok" id="taskProgress" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-panel">
+    <div class="sum-item"><div class="sum-val blue" id="sumTasks">0</div><div class="sum-lbl">Total Tasks</div></div>
+    <div class="sum-item"><div class="sum-val blue" id="sumMins">0</div><div class="sum-lbl">Total Mins</div></div>
+    <div class="sum-item"><div class="sum-val blue" id="sumHrs">0hr 0min</div><div class="sum-lbl">Total Hours</div></div>
+    <div class="sum-item"><div class="sum-val green" id="sumFree">420</div><div class="sum-lbl">Mins Free</div></div>
+    <div class="sum-item">
+      <div id="sumStatus" class="status-badge status-ok">✅ On Track</div>
+      <div class="sum-lbl" style="margin-top:10px">Status</div>
+    </div>
+  </div>
+
+  <!-- Tasks -->
+  <div class="section-title">Task Breakdown</div>
+  <div class="task-grid" id="taskGrid"></div>
+
+
+
+  <!-- Actions -->
+  <div class="action-row">
+    <button class="btn btn-success" onclick="saveToday()">💾 Save Record</button>
+    <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-secondary" onclick="resetCounts()">✕ Clear Counts</button>
+  </div>
+
+  <!-- History -->
+  <div class="section-title">Saved Records</div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<!-- Settings Overlay -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+
+<!-- Settings Drawer -->
+<div class="settings-drawer" id="settingsDrawer">
+  <div class="settings-hdr">
+    <div class="settings-hdr-title">⚙️ Settings</div>
+    <div class="settings-close" onclick="closeSettings()">✕</div>
+  </div>
+  <div class="settings-body">
+
+    <!-- Shift Hours -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">⏳ Shift Duration</div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <span style="font-size:0.8rem;font-weight:600;color:var(--text2);flex:1;">Shift Hours</span>
+        <input type="number" class="shift-num" id="shiftHrs" value="7" min="0.5" max="24" step="0.5" oninput="onShiftChange()" style="width:72px;"/>
+        <span class="shift-unit">hrs</span>
+      </div>
+      <p style="font-size:0.68rem;color:var(--muted);margin-top:8px;">Changing shift hours recalculates everything instantly.</p>
+    </div>
+
+    <!-- Add New Task -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">➕ Add New Task</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input class="add-task-name" id="newTaskName" placeholder="Task name (e.g. Data Entry)..." maxlength="40"/>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="number" class="add-task-mins" id="newTaskMins" placeholder="mins per task" min="1" max="999" style="flex:1;min-width:100px;"/>
+          <label class="add-task-auto-label">
+            <input type="checkbox" id="newTaskAuto"/> Auto-fill
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="addTask()">Add Task</button>
+        </div>
+        <p style="font-size:0.65rem;color:var(--muted);">💡 "Auto-fill" tasks automatically use remaining shift time.</p>
+      </div>
+    </div>
+
+    <!-- Input Style -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">Input Style</div>
+      <div class="style-opt active" id="opt-pm" onclick="setInputStyle('pm')">
+        <div class="style-opt-icon">➕</div>
+        <div class="style-opt-info"><div class="style-opt-name">Plus / Minus Buttons</div><div class="style-opt-desc">Classic − and + counter.</div></div>
+        <div class="style-opt-check" id="chk-pm">✓</div>
+      </div>
+      <div class="style-opt" id="opt-slider" onclick="setInputStyle('slider')">
+        <div class="style-opt-icon">🎚️</div>
+        <div class="style-opt-info"><div class="style-opt-name">Slider</div><div class="style-opt-desc">Drag to set count. Great on touch screens.</div></div>
+        <div class="style-opt-check" id="chk-slider"></div>
+      </div>
+    </div>
+
+    <!-- Task Durations -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">⏱ Task Durations</div>
+      <div id="durSettings"></div>
+      <button class="dur-reset" onclick="resetDurations()">↺ Reset All to Default</button>
+    </div>
+
+
+
+    <!-- Dark Mode -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">🌙 Dark Mode</div>
+      <div class="style-opt" id="opt-dark" onclick="toggleDark()">
+        <div class="style-opt-icon">🌙</div>
+        <div class="style-opt-info"><div class="style-opt-name">Dark Mode</div><div class="style-opt-desc">Easy on the eyes in low light.</div></div>
+        <div class="style-opt-check" id="chk-dark"></div>
+      </div>
+    </div>
+
+    <!-- About -->
+    <div class="settings-sec">
+      <div class="settings-sec-title">About</div>
+      <div class="settings-info">
+        <strong>ShiftTrack</strong> — Custom Work Time Calculator<br/>
+        Add your own tasks · Set durations · Adjust shift hours<br/>
+        Everything saves automatically in your browser 💾
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Keys ──────────────────────────────────────────────────────────────────
+const KEY_TASKS   = 'st_tasks';
+const KEY_PROFILE = 'st_profile';
+const KEY_STYLE   = 'st_inputStyle';
+const KEY_THEME   = 'st_theme';
+const KEY_DARK    = 'st_dark';
+const KEY_HISTORY = 'st_history';
+
+// ── Default tasks ─────────────────────────────────────────────────────────
+const DEFAULT_TASKS = [];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let TASKS       = [];
+let counts      = {};
+let autoOverrides = {};
+let SHIFT_MINS  = 420;
+let inputStyle  = 'pm';
+
+// ── Load everything from localStorage ────────────────────────────────────
+function loadAll() {
+  // Tasks
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY_TASKS));
+    TASKS = (saved && saved.length) ? saved : JSON.parse(JSON.stringify(DEFAULT_TASKS));
+  } catch { TASKS = JSON.parse(JSON.stringify(DEFAULT_TASKS)); }
+  counts = {}; TASKS.forEach(t => counts[t.id] = 0);
+
+  // Profile
+  try {
+    const p = JSON.parse(localStorage.getItem(KEY_PROFILE) || '{}');
+    if (p.name)     { document.getElementById('userName').value   = p.name; document.getElementById('headerSub').textContent = p.name; }
+    if (p.client)   { document.getElementById('clientName').value = p.client; }
+    if (p.shiftHrs) {
+      const el = document.getElementById('shiftHrs');
+      if (el) el.value = p.shiftHrs;
+      SHIFT_MINS = Math.round(p.shiftHrs * 60);
+    }
+  } catch {}
+
+  // Input style
+  inputStyle = localStorage.getItem(KEY_STYLE) || 'pm';
+  if (!['pm','slider'].includes(inputStyle)) inputStyle = 'pm';
+
+  // Theme
+  applyTheme(localStorage.getItem(KEY_THEME) || 'indigo', false);
+
+  // Dark
+  if (localStorage.getItem(KEY_DARK) === '1') {
+    document.body.classList.add('dark');
+    document.getElementById('opt-dark').classList.add('active');
+    document.getElementById('chk-dark').textContent = '✓';
+  }
+
+  updateProgressTitle();
+}
+
+// ── Profile save ──────────────────────────────────────────────────────────
+function saveProfile() {
+  const name     = document.getElementById('userName').value.trim();
+  const client   = document.getElementById('clientName').value.trim();
+  const shiftHrs = parseFloat(document.getElementById('shiftHrs').value) || 7;
+  localStorage.setItem(KEY_PROFILE, JSON.stringify({ name, client, shiftHrs }));
+  document.getElementById('headerSub').textContent = name || 'Daily Work Time Monitor';
+}
+
+// ── Shift hours change ────────────────────────────────────────────────────
+function onShiftChange() {
+  const hrs = parseFloat(document.getElementById('shiftHrs').value) || 7;
+  SHIFT_MINS = Math.round(Math.max(0.5, Math.min(24, hrs)) * 60);
+  saveProfile();
+  updateProgressTitle();
+  autoOverrides = {};
+  buildCards();
+  recalc();
+}
+
+function updateProgressTitle() {
+  document.getElementById('progressTitle').textContent =
+    `Task Load vs Shift Capacity (${SHIFT_MINS} mins)`;
+  document.getElementById('sumFree').textContent = SHIFT_MINS;
+}
+
+// ── Save tasks ────────────────────────────────────────────────────────────
+function saveTasks() { localStorage.setItem(KEY_TASKS, JSON.stringify(TASKS)); }
+
+// ── Add task ──────────────────────────────────────────────────────────────
+function addTask() {
+  const nameEl = document.getElementById('newTaskName');
+  const minsEl = document.getElementById('newTaskMins');
+  const autoEl = document.getElementById('newTaskAuto');
+  const name   = nameEl.value.trim();
+  const mins   = parseInt(minsEl.value) || 0;
+  if (!name) { showToast('⚠ Enter a task name!'); nameEl.focus(); return; }
+  if (mins < 1) { showToast('⚠ Enter minutes (min 1)!'); minsEl.focus(); return; }
+  const id = 'task_' + Date.now();
+  TASKS.push({ id, name, mins, auto: autoEl.checked });
+  counts[id] = 0;
+  nameEl.value = ''; minsEl.value = ''; autoEl.checked = false;
+  saveTasks(); buildCards(); recalc();
+  showToast(`✅ "${name}" added!`);
+}
+
+// ── Delete task ───────────────────────────────────────────────────────────
+function deleteTask(id) {
+  if (TASKS.length <= 1) { showToast('⚠ Need at least one task!'); return; }
+  const t = TASKS.find(x => x.id === id);
+  if (!confirm(`Remove "${t?.name}"?`)) return;
+  TASKS = TASKS.filter(x => x.id !== id);
+  delete counts[id]; delete autoOverrides[id];
+  saveTasks(); buildCards(); recalc();
+  showToast(`🗑 "${t?.name}" removed`);
+}
+
+// ── Build input widget ────────────────────────────────────────────────────
+function buildInput(t) {
+  const val = counts[t.id] || 0;
+  const max = Math.max(1, Math.floor(SHIFT_MINS / t.mins));
+  if (inputStyle === 'pm') return `
+    <div class="counter-widget">
+      <button class="counter-btn" onclick="setCount('${t.id}',(counts['${t.id}']||0)-1)">−</button>
+      <input type="number" class="counter-num" id="inp_${t.id}" value="${val||''}" placeholder="—" min="0" max="${max}" oninput="setCount('${t.id}',+this.value)"/>
+      <button class="counter-btn" onclick="setCount('${t.id}',(counts['${t.id}']||0)+1)">+</button>
+    </div>`;
+  if (inputStyle === 'slider') return `
+    <div class="slider-wrap">
+      <div class="slider-top">
+        <span style="font-size:0.68rem;color:var(--muted);font-weight:500">Count</span>
+        <span class="slider-val" id="sv_${t.id}">${val}</span>
+      </div>
+      <input type="range" class="task-slider" id="inp_${t.id}" min="0" max="${max}" value="${val}"
+        oninput="setCount('${t.id}',+this.value);document.getElementById('sv_${t.id}').textContent=this.value"/>
+      <div class="slider-minmax"><span>0</span><span>${max}</span></div>
+    </div>`;
+  return '';
+}
+
+// ── Build auto input ──────────────────────────────────────────────────────
+function buildAutoInput(t) {
+  return `
+    <div style="width:100%">
+      <div class="counter-widget auto-widget-editable" style="margin-bottom:6px">
+        <button class="counter-btn" onclick="adjustAuto('${t.id}',-1)">−</button>
+        <input type="number" class="counter-num" id="inp_${t.id}" value="${counts[t.id]||0}" min="0" oninput="onAutoInput('${t.id}',this.value)"/>
+        <button class="counter-btn" onclick="adjustAuto('${t.id}',1)">+</button>
+      </div>
+      <div class="auto-reset-row">
+        <span class="auto-calc-info" id="autoInfo_${t.id}">⚙ Auto</span>
+        <button class="auto-reset-btn" onclick="resetAutoTask('${t.id}')">↺ Reset to Auto</button>
+      </div>
+    </div>`;
+}
+
+// ── Build cards ───────────────────────────────────────────────────────────
+function buildCards() {
+  const grid = document.getElementById('taskGrid');
+  grid.innerHTML = '';
+  TASKS.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'task-card' + (t.auto ? ' auto-card' : '');
+    card.innerHTML = `
+      <div class="task-top">
+        <div class="task-name">${t.name}${t.auto ? ` <span class="auto-badge">Auto</span>` : ''}</div>
+        <div class="task-rate">${t.mins} min/task</div>
+        <button class="task-del-btn" onclick="deleteTask('${t.id}')" title="Remove task">✕</button>
+      </div>
+      ${t.auto ? '<div class="auto-hint">⚡ Fills remaining shift time automatically</div>' : ''}
+      <div class="task-input-row">
+        <div class="task-count-label">Tasks:</div>
+        ${t.auto ? buildAutoInput(t) : buildInput(t)}
+      </div>
+      <div class="task-result">
+        <div>
+          <div class="task-mins" id="res_mins_${t.id}">0 mins</div>
+          <div class="task-hrs" id="res_hrs_${t.id}">0hr 0min</div>
+        </div>
+        <div style="text-align:right;font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted)">
+          Max/shift: <span style="color:var(--text2);font-weight:600">${Math.floor(SHIFT_MINS/t.mins)}</span>
+        </div>
+      </div>
+      <div class="task-bar"><div class="task-bar-fill" id="bar_${t.id}" style="width:0%"></div></div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── Set count ─────────────────────────────────────────────────────────────
+function setCount(id, val) {
+  counts[id] = Math.max(0, Math.floor(+val) || 0);
+  const inp = document.getElementById('inp_' + id);
+  if (inp && inputStyle === 'pm') inp.value = counts[id] === 0 ? '' : counts[id];
+  if (inp && inputStyle === 'slider') inp.value = counts[id];
+  recalc();
+}
+
+// ── Auto task controls ────────────────────────────────────────────────────
+function adjustAuto(id, delta) {
+  autoOverrides[id] = true;
+  counts[id] = Math.max(0, (counts[id]||0) + delta);
+  document.getElementById('inp_'+id).value = counts[id];
+  recalc();
+}
+function onAutoInput(id, val) {
+  autoOverrides[id] = true;
+  counts[id] = Math.max(0, parseInt(val)||0);
+  recalc();
+}
+function resetAutoTask(id) {
+  autoOverrides[id] = false;
+  recalc();
+}
+
+// ── Recalculate ───────────────────────────────────────────────────────────
+function fmtHrMin(m) { return `${Math.floor(m/60)}hr ${m%60}min`; }
+
+function recalc() {
+  // Manual mins (non-auto tasks)
+  let manualMins = 0;
+  TASKS.filter(t => !t.auto).forEach(t => { manualMins += (counts[t.id]||0) * t.mins; });
+
+  // Auto tasks share remaining time
+  const autoTasks = TASKS.filter(t => t.auto);
+  let remaining = Math.max(0, SHIFT_MINS - manualMins);
+  autoTasks.forEach(t => {
+    const autoVal = Math.floor(remaining / t.mins);
+    if (!autoOverrides[t.id]) {
+      counts[t.id] = autoVal;
+      const el = document.getElementById('inp_'+t.id);
+      if (el) el.value = autoVal;
+    }
+    const info = document.getElementById('autoInfo_'+t.id);
+    if (info) {
+      info.textContent = autoOverrides[t.id] ? `⚙ Auto: ${autoVal} (overridden)` : `⚙ Auto: ${autoVal} tasks`;
+      info.style.color = autoOverrides[t.id] ? 'var(--warn)' : 'var(--accent)';
+    }
+    remaining = Math.max(0, remaining - counts[t.id] * t.mins);
+  });
+
+  // Totals
+  let totalMins = 0, totalTasks = 0;
+  TASKS.forEach(t => {
+    const c = counts[t.id]||0, m = c * t.mins;
+    totalMins += m; totalTasks += c;
+    const rm = document.getElementById('res_mins_'+t.id); if(rm) rm.textContent = m+' mins';
+    const rh = document.getElementById('res_hrs_'+t.id);  if(rh) rh.textContent = fmtHrMin(m);
+    const br = document.getElementById('bar_'+t.id);      if(br) br.style.width = Math.min(100,(m/SHIFT_MINS)*100)+'%';
+  });
+
+  const free = SHIFT_MINS - totalMins, pct = (totalMins/SHIFT_MINS)*100;
+  document.getElementById('sumTasks').textContent = totalTasks;
+  document.getElementById('sumMins').textContent  = totalMins;
+  document.getElementById('sumHrs').textContent   = fmtHrMin(totalMins);
+  document.getElementById('sumFree').textContent  = Math.max(0,free);
+  document.getElementById('sumFree').className    = 'sum-val '+(free<0?'red':free<60?'yellow':'green');
+  const prog = document.getElementById('taskProgress'), pctEl = document.getElementById('taskPct');
+  prog.style.width  = Math.min(100,pct)+'%';
+  prog.className    = 'progress-fill '+(pct>100?'over':pct>85?'warn':'ok');
+  pctEl.textContent = pct.toFixed(1)+'%';
+  pctEl.style.color = pct>100?'var(--accent2)':pct>85?'var(--warn)':'var(--accent3)';
+  const sb = document.getElementById('sumStatus');
+  if(pct>100){sb.className='status-badge status-over';sb.textContent='🔴 Exceeds Shift';}
+  else if(pct>85){sb.className='status-badge status-warn';sb.textContent='⚠ Near Limit';}
+  else{sb.className='status-badge status-ok';sb.textContent='✅ On Track';}
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('settingsDrawer').classList.add('open');
+  buildDurSettings();
+}
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('settingsDrawer').classList.remove('open');
+}
+
+// ── Input style ───────────────────────────────────────────────────────────
+function setInputStyle(s) {
+  inputStyle = s;
+  localStorage.setItem(KEY_STYLE, s);
+  ['pm','slider'].forEach(x => {
+    document.getElementById('opt-'+x).classList.toggle('active', x===s);
+    document.getElementById('chk-'+x).textContent = x===s ? '✓' : '';
+  });
+  buildCards(); recalc();
+  showToast('✅ Input style updated!');
+}
+
+// ── Duration settings ─────────────────────────────────────────────────────
+function buildDurSettings() {
+  const c = document.getElementById('durSettings');
+  if (!c) return;
+  c.innerHTML = TASKS.map(t => `
+    <div class="dur-row">
+      <div class="dur-name">${t.name}</div>
+      <div class="dur-wrap">
+        <input type="number" class="dur-input" id="dur_${t.id}" value="${t.mins}" min="1" max="999"
+          oninput="updateDuration('${t.id}',this.value)"/>
+        <span class="dur-unit">min</span>
+      </div>
+    </div>`).join('');
+}
+
+function updateDuration(id, val) {
+  const mins = Math.max(1, parseInt(val)||1);
+  const task = TASKS.find(t => t.id===id);
+  if (!task) return;
+  task.mins = mins;
+  saveTasks();
+  autoOverrides = {};
+  buildCards(); recalc();
+}
+
+function resetDurations() {
+  DEFAULT_TASKS.forEach(dt => {
+    const t = TASKS.find(x => x.id===dt.id);
+    if (t) t.mins = dt.mins;
+  });
+  saveTasks(); buildDurSettings(); buildCards(); recalc();
+  showToast('↺ Durations reset to defaults!');
+}
+
+// ── Themes ────────────────────────────────────────────────────────────────
+const THEMES = [
+  {id:'indigo', accent:'#6366f1', light:'#eef2ff'},
+  {id:'violet', accent:'#8b5cf6', light:'#f5f3ff'},
+  {id:'rose',   accent:'#f43f5e', light:'#fff1f2'},
+  {id:'orange', accent:'#f97316', light:'#fff7ed'},
+  {id:'teal',   accent:'#14b8a6', light:'#f0fdfa'},
+  {id:'sky',    accent:'#0ea5e9', light:'#f0f9ff'},
+  {id:'emerald',accent:'#10b981', light:'#ecfdf5'},
+  {id:'slate',  accent:'#475569', light:'#f8fafc'},
+];
+function buildThemeSwatches() {
+  const cur = localStorage.getItem(KEY_THEME) || 'indigo';
+  document.getElementById('themeRow').innerHTML = THEMES.map(th =>
+    `<div class="swatch${th.id===cur?' active':''}" id="sw-${th.id}" style="background:${th.accent}" title="${th.id}"
+      onclick="applyTheme('${th.id}',true)"></div>`).join('');
+}
+function applyTheme(id, save) {
+  const th = THEMES.find(x=>x.id===id)||THEMES[0];
+  document.documentElement.style.setProperty('--accent', th.accent);
+  document.documentElement.style.setProperty('--accent-light', th.light);
+  if (save) {
+    localStorage.setItem(KEY_THEME, id);
+    document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+    const sw = document.getElementById('sw-'+id);
+    if (sw) sw.classList.add('active');
+    showToast('🎨 Theme updated!');
+  }
+}
+
+// ── Dark mode ─────────────────────────────────────────────────────────────
+function toggleDark() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('opt-dark').classList.toggle('active', isDark);
+  document.getElementById('chk-dark').textContent = isDark ? '✓' : '';
+  localStorage.setItem(KEY_DARK, isDark ? '1' : '0');
+  showToast(isDark ? '🌙 Dark mode on' : '☀️ Light mode on');
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  document.getElementById('liveClock').textContent =
+    [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ── Save / Export / Reset ─────────────────────────────────────────────────
+function saveToday() {
+  const now    = new Date();
+  const name   = document.getElementById('userName').value.trim();
+  const client = document.getElementById('clientName').value.trim();
+  const dateStr = now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  const timeStr = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  let totalMins=0, totalTasks=0;
+  const taskSnap = {};
+  TASKS.forEach(t=>{
+    taskSnap[t.id] = {name:t.name, count:counts[t.id], mins:t.mins};
+    totalTasks += counts[t.id];
+    totalMins  += counts[t.id]*t.mins;
+  });
+  const h = getHistory();
+  h.unshift({date:dateStr,time:timeStr,name,client,tasks:taskSnap,totalTasks,totalMins});
+  localStorage.setItem(KEY_HISTORY, JSON.stringify(h.slice(0,30)));
+  renderHistory(); showToast('✅ Record saved!');
+}
+
+function getHistory(){try{return JSON.parse(localStorage.getItem(KEY_HISTORY)||'[]');}catch{return[];}}
+
+function renderHistory(){
+  const list = document.getElementById('historyList'), h = getHistory();
+  if(!h.length){list.innerHTML='<div class="empty-history">No records yet — save a record to start tracking.</div>';return;}
+  list.innerHTML = h.map((r,i)=>`
+    <div class="history-item">
+      <div class="history-date">${r.date} · ${r.time}</div>
+      ${r.name||r.client ? `<div class="history-client">${[r.name,r.client].filter(Boolean).join(' — ')}</div>` : ''}
+      <div class="history-tasks">
+        ${Object.values(r.tasks||{}).filter(t=>t.count>0).map(t=>`<span class="history-tag">${t.name.split(' ')[0]}: ${t.count}</span>`).join('')}
+      </div>
+      <div class="history-total">${r.totalMins}m · ${r.totalTasks} tasks</div>
+      <button class="history-del" onclick="deleteRecord(${i})">✕</button>
+    </div>`).join('');
+}
+
+function deleteRecord(i){const h=getHistory();h.splice(i,1);localStorage.setItem(KEY_HISTORY,JSON.stringify(h));renderHistory();}
+
+function exportCSV(){
+  const h = getHistory();
+  if(!h.length){showToast('No records to export yet.');return;}
+  const allNames = [...new Set(h.flatMap(r=>Object.values(r.tasks||{}).map(t=>t.name)))];
+  let csv = 'Date,Time,Name,Client,'+allNames.join(',')+',Total Tasks,Total Mins,Total Hours\n';
+  h.forEach(r=>{
+    const m={};
+    Object.values(r.tasks||{}).forEach(t=>m[t.name]=t.count);
+    csv+=`"${r.date}","${r.time}","${r.name||''}","${r.client||''}",`+allNames.map(n=>m[n]||0).join(',')+`,${r.totalTasks},${r.totalMins},${(r.totalMins/60).toFixed(2)}\n`;
+  });
+  const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='ShiftTrack_Records.csv';a.click();URL.revokeObjectURL(url);
+  showToast('⬇ CSV downloaded!');
+}
+
+function resetCounts(){
+  TASKS.forEach(t=>{counts[t.id]=0;});
+  autoOverrides={};
+  buildCards(); recalc(); showToast('Counts cleared.');
+}
+
+// ── Enter key shortcuts ───────────────────────────────────────────────────
+document.getElementById('newTaskName').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('newTaskMins').focus();});
+document.getElementById('newTaskMins').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadAll();
+setInputStyle(inputStyle);
+buildCards();
+recalc();
+renderHistory();
+</script>
+</body>
+</html>
